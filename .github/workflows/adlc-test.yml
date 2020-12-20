@@ -1,0 +1,30 @@
+name: ADLC test
+
+on: push
+
+jobs:
+  unit_tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Set unit-test mode
+        run: docker/setEnv.sh unit_tests_cicd
+      
+      # Pull the latest image to build, and avoid caching pull-only images.
+      # (docker pull is faster than caching in most cases.)
+      - run: docker-compose pull
+      # In this step, this action saves a list of existing images,
+      # the cache is created without them in the post run.
+      # It also restores the cache if it exists.
+      - uses: satackey/action-docker-layer-caching@v0.0.11
+        # Ignore the failure of a step and avoid terminating the job.
+        continue-on-error: true
+        with:
+          key: docker-layer-caching-Unit-tests-{hash}
+          restore-keys: docker-layer-caching-Unit-tests-
+
+
+      - name: Build the stack
+        run: docker-compose build
